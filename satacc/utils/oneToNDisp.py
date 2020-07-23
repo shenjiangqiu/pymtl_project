@@ -9,6 +9,12 @@ class OneToNDisp(Component):
     the OneToNDisp class
     input:1 recv ifc
     output: N give ifc
+
+    Args:
+            data_bits (int): the data size 
+            num_outs (int): The N out_puts
+            input_buffer_size (int): buffer size to store the input
+            out_put_buffer_size (int): buffer size to store the output
     '''
     def construct(s, data_bits, num_outs, input_buffer_size, out_put_buffer_size):
         '''

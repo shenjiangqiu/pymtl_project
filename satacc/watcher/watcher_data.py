@@ -34,7 +34,7 @@ class Watcher_data(Component):
         # types
         # ifcs
         s.get = GetIfcRTL(data_size)
-        s.send = SendIfcRTL(data_size)  # send to watcher unit
+        s.send = SendIfcRTL(return_size)  # send to watcher unit
         s.meta_mem_send = SendIfcRTL(mk_bits(32))
         s.meta_mem_recv = RecvIfcRTL(mk_bits(64))  # one cache line size
         s.data_mem_send = SendIfcRTL(mk_bits(32))

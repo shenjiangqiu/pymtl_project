@@ -8,13 +8,27 @@ from . import watcher_data, watcher_process
 
 
 class Watcher(Component):
+    """the watcher class bind the data and proc
+        input: get_from_trail: Getifc
+        output: Send_to_clause: Sendifc
 
+
+    Args:
+        Component (self): self
+    """
     def construct(s):
         # ifcs
         s.get_from_trail = GetIfcRTL(mk_bits(32))
         s.send_to_clause = SendIfcRTL(mk_bits(32))
+        s.meta_mem_send = SendIfcRTL(mk_bits(32))
+        s.meta_mem_recv = RecvIfcRTL(mk_bits(64))  # one cache line size
+        s.data_mem_send = SendIfcRTL(mk_bits(32))
+
+        # one bool bit and the clause reference
+        s.data_mem_recv = RecvIfcRTL(mk_bits(33))
+
         # components
-        s.watcher_data = watcher_data.Watcher_data(32, 33, 8, 8)
+        s.watcher_data = watcher_data.Watcher_data(32, 33, 8, 8,2)
         s.watcher_process = watcher_process.Watcher_process(33, 32)
         # connects
         s.get_from_trail //= s.watcher_data.get

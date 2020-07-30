@@ -2,8 +2,8 @@
 ## overview
 this is a pymtl3 project to simulate a SAT solver accelerator for python3.6 (their are some problem when using python3.8)
 ## install
-pip install pymtl3
-pip install .
+1. pip install pymtl3
+2. pip install .
 ## usage
 ```python
 from pymtl3 import *

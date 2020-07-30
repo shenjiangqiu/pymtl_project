@@ -61,5 +61,5 @@ class Acc(Component):
         s.trail.recv.msg //= s.n_to_trail.give.ret
         @update
         def comb():
-            s.trail.recv.en @=s.trail.recv.rdy and s.n_to_trail.give.rdy
-            s.n_to_trail.give.en @=s.trail.recv.rdy and s.n_to_trail.give.rdy
+            s.trail.recv.en @=s.trail.recv.rdy & s.n_to_trail.give.rdy
+            s.n_to_trail.give.en @=s.trail.recv.rdy & s.n_to_trail.give.rdy

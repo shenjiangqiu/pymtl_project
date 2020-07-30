@@ -34,9 +34,9 @@ class Trail(Component):
 
         @update
         def comb():
-            s.send.en@=s.send.rdy and s.trail.deq.rdy
-            s.trail.deq.en @= s.send.rdy and s.trail.deq.rdy
-            pass
+            s.send.en@=s.send.rdy & s.trail.deq.rdy
+            s.trail.deq.en @= s.send.rdy & s.trail.deq.rdy
+            
 
     def line_trace(s):
         return "{},{},{}".format(s.recv, s.trail.line_trace(), s.send)

@@ -42,16 +42,9 @@ class Clause_data(Component):
 
         @update
         def comb():
-            if s.mem_send.rdy and s.clause_cr_buffer.deq.rdy:
-                s.mem_send.en@=1
-                s.clause_cr_buffer.deq.en@=1
-            else:
-                s.mem_send.en@=0
-                s.clause_cr_buffer.deq.en@=0
-
-            if s.send.rdy and s.literal_buffer.deq.rdy:
-                s.send.en@=1
-                s.literal_buffer.deq.en@=1
-            else:
-                s.send.en@=0
-                s.literal_buffer.deq.en@=0
+            s.mem_send.en@=s.mem_send.rdy & s.clause_cr_buffer.deq.rdy
+            s.clause_cr_buffer.deq.en@=s.mem_send.rdy & s.clause_cr_buffer.deq.rdy
+            
+            s.send.en@=s.send.rdy & s.literal_buffer.deq.rdy
+            s.literal_buffer.deq.en@=s.send.rdy & s.literal_buffer.deq.rdy
+            

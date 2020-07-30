@@ -36,13 +36,11 @@ class Watcher_process(Component):
 
         @update
         def comb():
-            s.clause_send_buffer.enq.msg @= s.watcher_buffer.deq.ret[1:]
-            s.watcher_buffer.deq.en @=s.watcher_buffer.deq.rdy and (
-                s.clause_send_buffer.enq.rdy or s.watcher_buffer.deq.ret[0] == 1)  # if clause buffer rdy or no need to enqueue
-            s.clause_send_buffer.enq.en @=s.clause_send_buffer.enq.rdy and s.watcher_buffer.deq.rdy and (
-                s.watcher_buffer.deq.ret[0] == 0)  # only if deq.rdy and not bypass(==0)
-            s.send.en @=s.send.rdy and s.clause_send_buffer.deq.rdy
-            s.clause_send_buffer.deq.en @= s.send.rdy and s.clause_send_buffer.deq.rdy
-            pass
+            s.clause_send_buffer.enq.msg @= s.watcher_buffer.deq.ret[1:33]
+            s.watcher_buffer.deq.en @=s.watcher_buffer.deq.rdy & (s.clause_send_buffer.enq.rdy | (s.watcher_buffer.deq.ret[0] == 1))  # if clause buffer rdy or no need to enqueue
+            s.clause_send_buffer.enq.en @=s.clause_send_buffer.enq.rdy & s.watcher_buffer.deq.rdy & (s.watcher_buffer.deq.ret[0] == 0)  # only if deq.rdy and not bypass(==0)
+            s.send.en @=s.send.rdy & s.clause_send_buffer.deq.rdy
+            s.clause_send_buffer.deq.en @= s.send.rdy & s.clause_send_buffer.deq.rdy
+            
 
-        pass
+        

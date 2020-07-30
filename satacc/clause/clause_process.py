@@ -37,13 +37,13 @@ class Clause_process(Component):
         # fsm to process the literals
         @update
         def comb():
-            s.literal_buffer.deq.en@=s.literal_buffer.deq.rdy and s.mem_req.rdy
-            s.mem_req.en@=s.literal_buffer.deq.rdy and s.mem_req.rdy
+            s.literal_buffer.deq.en@=s.literal_buffer.deq.rdy & s.mem_req.rdy
+            s.mem_req.en@=s.literal_buffer.deq.rdy & s.mem_req.rdy
 
             # TO-DO need to process the logic of the literal value
             s.literal_value_buffer.deq.en@=s.literal_value_buffer.deq.rdy
 
             s.generated_buffer.enq.en@=0
-            s.generated_buffer.enq.msg@=Bits32(0)
-            s.generated_buffer.deq.en@=s.generated_buffer.deq.rdy and s.send_to_trail.rdy
-            s.send_to_trail.en@=s.generated_buffer.deq.rdy and s.send_to_trail.rdy
+            s.generated_buffer.enq.msg@=0
+            s.generated_buffer.deq.en@=s.generated_buffer.deq.rdy & s.send_to_trail.rdy
+            s.send_to_trail.en@=s.generated_buffer.deq.rdy & s.send_to_trail.rdy

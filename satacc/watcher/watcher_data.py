@@ -52,7 +52,6 @@ class Watcher_data(Component):
         s.meta_mem_recv //= s.meta_data_queue.enq
         s.meta_mem_send.msg //= s.send_queue.deq.ret
 
-        s.data_mem_send.msg //= s.meta_data_queue.deq.ret[32:64]
         s.data_mem_recv //= s.return_queue.enq
 
         s.send.msg //= s.return_queue.deq.ret
@@ -60,21 +59,15 @@ class Watcher_data(Component):
         # logics
         @update
         def comb():
-            s.get.en@=s.get.rdy and s.send_queue.enq.rdy
-            s.send_queue.enq.en@=s.get.rdy and s.send_queue.enq.rdy
+            s.data_mem_send.msg @= s.meta_data_queue.deq.ret[32:64]
+            s.get.en@=s.get.rdy & s.send_queue.enq.rdy
+            s.send_queue.enq.en@=s.get.rdy & s.send_queue.enq.rdy
 
-            s.meta_mem_send.en@=s.meta_mem_send.rdy and s.send_queue.deq.rdy
-            s.send_queue.deq.en@=s.meta_mem_send.rdy and s.send_queue.deq.rdy
+            s.meta_mem_send.en@=s.meta_mem_send.rdy & s.send_queue.deq.rdy
+            s.send_queue.deq.en@=s.meta_mem_send.rdy & s.send_queue.deq.rdy
 
-            s.data_mem_send.en@=s.data_mem_send.rdy and s.meta_data_queue.deq.rdy
-            s.meta_data_queue.deq.en@=s.data_mem_send.rdy and s.meta_data_queue.deq.rdy
+            s.data_mem_send.en@=s.data_mem_send.rdy & s.meta_data_queue.deq.rdy
+            s.meta_data_queue.deq.en@=s.data_mem_send.rdy & s.meta_data_queue.deq.rdy
 
-            s.send.en@=s.send.rdy and s.return_queue.deq.rdy
-            s.return_queue.deq.en @=s.send.rdy and s.return_queue.deq.rdy
-
-            pass
-
-        @update_ff
-        def seq():
-            pass
-    pass
+            s.send.en@=s.send.rdy & s.return_queue.deq.rdy
+            s.return_queue.deq.en @=s.send.rdy & s.return_queue.deq.rdy

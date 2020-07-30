@@ -1,10 +1,80 @@
 from pymtl3 import *
 from pymtl3.stdlib.ifcs import RecvIfcRTL, SendIfcRTL, GiveIfcRTL, GetIfcRTL
 from pymtl3.stdlib.basic_rtl import Mux
-from pymtl3.stdlib.queues import PipeQueueRTL
+from pymtl3.stdlib.queues import PipeQueueRTL, BypassQueueRTL
+from pymtl3.stdlib.queues.enrdy_queues import BypassQueue1RTL
 
 
-class NToOneDisp(Component):
+class NToOneDispNoBuffer(Component):
+    '''
+    the NToOneDispNoBuffer class
+    input: N recv ifc
+    output: 1 give ifc
+
+    Args:
+            data_type : the data type 
+            num_in (int): The N inputs
+            
+
+    '''
+    def construct(self, data_type, num_in):
+        '''
+        def construct(s, data_type, num_in):
+        Args:
+            data_type-: the data type 
+            num_in (int): The N inputs
+            
+        '''
+        # types
+        choose_type = mk_bits(max(1, clog2(num_in)))
+
+        # ifcs
+        self.recvs = [RecvIfcRTL(data_type) for _ in range(num_in)]
+        self.send = SendIfcRTL(data_type)
+
+        # buffers
+        self.input_buffer = [BypassQueue1RTL(
+            data_type) for _ in range(num_in)]
+        self.out_buffer = BypassQueue1RTL(data_type)
+
+        self.current_chose = Wire(mk_bits(max(1, clog2(num_in))))
+        # wires
+        self.choose = Mux(mk_bits(1), num_in)
+        self.msg_choose = Mux(data_type, num_in)
+        # connections
+
+        for i in range(num_in):
+            self.recvs[i] //= self.input_buffer[i].enq
+            self.input_buffer[i].deq.ret //= self.msg_choose.in_[i]
+            self.input_buffer[i].deq.rdy //= self.choose.in_[i]
+
+        self.msg_choose.out //= self.out_buffer.enq.msg
+
+        self.choose.sel //= self.current_chose
+        self.msg_choose.sel //= self.current_chose
+        # logic
+
+        @update
+        def comb():
+            self.send.en @=self.send.rdy & self.out_buffer.deq.rdy
+            self.out_buffer.deq.en@=self.send.rdy & self.out_buffer.deq.rdy
+
+            self.out_buffer.enq.en @= self.out_buffer.enq.rdy & self.choose.out
+            for i in range(num_in):
+                self.input_buffer[i].deq.en @= 1 if self.out_buffer.enq.rdy & self.input_buffer[i].deq.rdy & (
+                    choose_type(i) == self.current_chose) else 0
+
+        @update_ff
+        def seq():
+
+            self.current_chose <<= (
+                self.current_chose + 1) % (num_in-1) if ~(self.reset) else 0
+
+    def line_trace(self):
+        return "{},{},{}".format([input_buffer.line_trace() for input_buffer in self.input_buffer], self.current_chose, self.out_buffer.line_trace)
+
+
+class NToOneDispWithBuffer(Component):
     '''
     the NToOneDisp class
     input: N recv ifc
@@ -17,7 +87,7 @@ class NToOneDisp(Component):
             out_put_buffer_size (int): buffer size to store the output
 
     '''
-    def construct(s, data_bits, num_in, input_buffer_size, out_put_buffer_size):
+    def construct(self, data_type, num_in, input_buffer_size, out_put_buffer_size):
         '''
         def construct(s, data_bits, num_in, input_buffer_size, out_put_buffer_size):
         Args:
@@ -31,45 +101,46 @@ class NToOneDisp(Component):
         choose_type = mk_bits(max(1, clog2(num_in)))
 
         # ifcs
-        s.recvs = [RecvIfcRTL(mk_bits(data_bits)) for _ in range(num_in)]
-        s.give = GiveIfcRTL(mk_bits(data_bits))
+        self.recvs = [RecvIfcRTL(data_type) for _ in range(num_in)]
+        self.send = SendIfcRTL(data_type)
 
         # buffers
-        s.input_buffer = [PipeQueueRTL(
-            mk_bits(data_bits), input_buffer_size) for _ in range(num_in)]
-        s.out_buffer = PipeQueueRTL(mk_bits(data_bits), out_put_buffer_size)
+        self.input_buffer = [PipeQueueRTL(
+            data_type, input_buffer_size) for _ in range(num_in)]
+        self.out_buffer = PipeQueueRTL(data_type, out_put_buffer_size)
 
-        s.current_chose = Wire(max(1, clog2(num_in)))
-        # wirs
-        s.choose = Mux(1, num_in)
-        s.msg_choose = Mux(data_bits, num_in)
+        self.current_chose = Wire(mk_bits(max(1, clog2(num_in))))
+        # wires
+        self.choose = Mux(mk_bits(1), num_in)
+        self.msg_choose = Mux(data_type, num_in)
         # connections
-        s.give //= s.out_buffer.deq
+
         for i in range(num_in):
-            s.recvs[i] //= s.input_buffer[i].enq
-            s.input_buffer[i].deq.ret //= s.msg_choose.in_[i]
-            s.input_buffer[i].deq.rdy //= s.choose.in_[i]
+            self.recvs[i] //= self.input_buffer[i].enq
+            self.input_buffer[i].deq.ret //= self.msg_choose.in_[i]
+            self.input_buffer[i].deq.rdy //= self.choose.in_[i]
 
-        s.msg_choose.out //= s.out_buffer.enq.msg
+        self.msg_choose.out //= self.out_buffer.enq.msg
 
-        s.choose.sel //= s.current_chose
-        s.msg_choose.sel //= s.current_chose
+        self.choose.sel //= self.current_chose
+        self.msg_choose.sel //= self.current_chose
         # logic
 
         @update
         def comb():
-            s.out_buffer.enq.en @= s.out_buffer.enq.rdy and s.choose.out
+            self.send.en @=self.send.rdy & self.out_buffer.deq.rdy
+            self.out_buffer.deq.en@=self.send.rdy & self.out_buffer.deq.rdy
+
+            self.out_buffer.enq.en @= self.out_buffer.enq.rdy & self.choose.out
             for i in range(num_in):
-                s.input_buffer[i].deq.en @= 1 if s.out_buffer.enq.rdy and s.input_buffer[i].deq.rdy and choose_type(
-                    i) == s.current_chose else 0
-            pass
+                self.input_buffer[i].deq.en @= 1 if self.out_buffer.enq.rdy & self.input_buffer[i].deq.rdy & (
+                    choose_type(i) == self.current_chose) else 0
 
         @update_ff
         def seq():
 
-            s.current_chose <<= (
-                s.current_chose + 1) % (num_in-1) if not s.reset else 0
-            pass
+            self.current_chose <<= (
+                self.current_chose + 1) % (num_in-1) if ~(self.reset) else 0
 
-    def line_trace(s):
-        return "{},{},{}".format([input_buffer.line_trace() for input_buffer in s.input_buffer], s.current_chose, s.out_buffer.line_trace)
+    def line_trace(self):
+        return "{},{},{}".format([input_buffer.line_trace() for input_buffer in self.input_buffer], self.current_chose, self.out_buffer.line_trace)

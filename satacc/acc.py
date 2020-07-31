@@ -13,53 +13,59 @@ from .utils import trail, nToOneDisp, oneToNDisp
 class Acc(Component):
     def construct(s):
         # ifcs
+        req = Bits153
+        resp = Bits81
+        s.clause_size_mem_sends = [SendIfcRTL(mk_bits(110)) for _ in range(8)]
+        s.clause_size_mem_recvs = [RecvIfcRTL(mk_bits(48)) for _ in range(8)]
+        s.clause_fetcher_mem_outs = [SendIfcRTL(req) for _ in range(8)]
+        s.clause_fetcher_mem_ins = [RecvIfcRTL(resp) for _ in range(8)]
+        s.clause_value_mem_sends = [SendIfcRTL(mk_bits(79)) for _ in range(8)]
+        s.clause_value_mem_recvs = [RecvIfcRTL(mk_bits(17)) for _ in range(8)]
+        s.clause_confs = [OutPort() for _ in range(8)]
+
+        s.watcher_lit_to_size_addr_mem_sends = [
+            SendIfcRTL(mk_bits(176)) for _ in range(8)]
+        s.watcher_lit_to_size_addr_mem_recvs = [
+            RecvIfcRTL(mk_bits(114)) for _ in range(8)]
+        s.watcher_watcher_send_mem_sends = [
+            SendIfcRTL(Bits144) for _ in range(8)]
+        s.watcher_watcher_recvs = [RecvIfcRTL(Bits82) for _ in range(8)]
+        s.watcher_value_sends = [SendIfcRTL(Bits86) for _ in range(8)]
+        s.watcher_value_recvs = [RecvIfcRTL(Bits24) for _ in range(8)]
+
         s.trail_input_ifc = RecvIfcRTL(mk_bits(32))
 
-        s.watcher_meta_mem_send = [SendIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # send watcher addr
-        s.watcher_meta_mem_recv = [RecvIfcRTL(
-            mk_bits(64)) for _ in range(8)]  # get watcher metadata
-        s.watcher_data_mem_send = [SendIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # send watcher data addr
-        # get watcher wachers(include one bit bool and a clause ref)
-        s.watcher_data_mem_recv = [RecvIfcRTL(mk_bits(33)) for _ in range(8)]
-
-        s.clause_mem_data_send = [SendIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # send clause ref
-        s.clause_mem_data_recv = [RecvIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # recive literals
-        s.clause_mem_proc_send = [SendIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # send literal value addr
-        s.clause_mem_proc_recv = [RecvIfcRTL(
-            mk_bits(32)) for _ in range(8)]  # get values
-
         # components
-        s.n_to_trail = nToOneDisp.NToOneDisp(32, 9, 16, 16)
-        s.trail_to_watchers = oneToNDisp.OneToNDisp(32, 8, 2, 16)
+        s.n_to_trail = nToOneDisp.NToOneDispWithBuffer(32, 9, 16, 16)
+        s.trail_to_watchers = oneToNDisp.OneToNDispWithBuffer(32, 8, 2, 16)
         s.trail = trail.Trail(32, 1024)
-        s.watchers = [Watcher() for _ in range(8)]
-        s.clauses = [Clause() for _ in range(8)]
+
+        s.watchers = [Watcher(i) for i in range(8)]
+        s.clauses = [Clause(i) for i in range(8)]
 
         # connects
         for i in range(8):
-            s.watchers[i].send_to_clause //= s.clauses[i].recv
-            s.watchers[i].get_from_trail //= s.trail_to_watchers.gives[i]
-            s.clauses[i].send //= s.n_to_trail.recvs[i]
+            s.clause_size_mem_sends[i] //= s.clauses[i].size_mem_send
+            s.clause_size_mem_recvs[i] //= s.clauses[i].size_mem_recv
+            s.clause_fetcher_mem_outs[i] //= s.clauses[i].fetcher_mem_out
+            s.clause_fetcher_mem_ins[i] //= s.clauses[i].fetcher_mem_in
+            s.clause_value_mem_sends[i] //= s.clauses[i].value_mem_send
+            s.clause_value_mem_recvs[i] //= s.clauses[i].value_mem_recv
+            s.clause_confs[i] //= s.clauses[i].conf
 
-            s.watchers[i].data_mem_recv //= s.watcher_data_mem_recv[i]
-            s.watchers[i].data_mem_send //= s.watcher_data_mem_send[i]
-            s.watchers[i].meta_mem_recv //= s.watcher_meta_mem_recv[i]
-            s.watchers[i].meta_mem_send //= s.watcher_meta_mem_send[i]
+            s.watcher_lit_to_size_addr_mem_sends[i] //= s.watchers[i].lit_to_size_addr_mem_send
+            s.watcher_lit_to_size_addr_mem_recvs[i] //= s.watchers[i].lit_to_size_addr_mem_recv
+            s.watcher_watcher_send_mem_sends[i] //= s.watchers[i].watcher_send_mem_send
+            s.watcher_watcher_recvs[i] //= s.watchers[i].watcher_recv
+            s.watcher_value_sends[i] //= s.watchers[i].value_send
+            s.watcher_value_recvs[i] //= s.watchers[i].value_recv
 
-            s.clauses[i].mem_data_recv //= s.clause_mem_data_recv[i]
-            s.clauses[i].mem_data_send //= s.clause_mem_data_send[i]
-            s.clauses[i].mem_proc_recv //= s.clause_mem_proc_recv[i]
-            s.clauses[i].mem_proc_send //= s.clause_mem_proc_send[i]
-
+            s.watchers[i].cr_send //= s.clauses[i].cr_recv
+            s.trail_to_watchers.sends[i] //= s.watchers[i].from_trail_recv
+            s.n_to_trail.recvs[i] //= s.clauses[i].to_trail
+            
         s.n_to_trail.recvs[-1] //= s.trail_input_ifc
+        
         s.trail_to_watchers.recv //= s.trail.send
-        s.trail.recv.msg //= s.n_to_trail.give.ret
-        @update
-        def comb():
-            s.trail.recv.en @=s.trail.recv.rdy & s.n_to_trail.give.rdy
-            s.n_to_trail.give.en @=s.trail.recv.rdy & s.n_to_trail.give.rdy
+        #s.trail.recv.msg //= s.n_to_trail.give.ret
+        s.trail.recv //= s.n_to_trail.send

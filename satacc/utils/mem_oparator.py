@@ -6,14 +6,13 @@ from pymtl3.stdlib.mem import mk_mem_msg, MemMasterIfcRTL, MemMsgType
 from pymtl3.stdlib.basic_rtl import Reg, RegEn, RegEnRst
 
 
-
 class Sized_memory_sender(Component):
     def construct(s, size_type, addr_type, item_size, mem_request_dest):
         # types
         s.size_type = size_type
         s.addr_type = addr_type
         s.item_size = item_size
-        req, _ = mk_mem_msg(8, 64, item_size)
+        req = Bits144
         # ifcs
 
         s.size_recv = RecvIfcRTL(size_type)
@@ -54,9 +53,7 @@ class Sized_memory_sender(Component):
             s.size_data_mux.sel @=0 if s.size_reg.out == 0 else 1
             # build the request.
             message = req()
-            message.type_ = MemMsgType.READ
-            message.opaque = mem_request_dest
-            message.addr = s.addr_reg.out
+
             s.mem_out.msg @= message
             s.size_data_mux.in_[1] @= s.size_data_mux.out - 1
             # addr will change every round
@@ -131,9 +128,9 @@ class Sized_memory_sender_in_order(Component):
         @update
         def some_connect():
             if s.need_to_push_zero.out == 0:
-                s.recv_queue.enq.msg @= s.mem_in.msg[17:81]
+                s.recv_queue.enq.msg @= s.mem_in.msg[17:17+32]
             else:
-                s.recv_queue.enq.msg @= 0
+                s.recv_queue.enq.msg @= Bits32(0)
             if s.need_to_push_zero.out & s.recv_queue.enq.rdy:  # current need, and push it
                 s.need_to_push_zero.in_ @=0
             elif s.remaining_recv_reg.out != 0:  # not need yet

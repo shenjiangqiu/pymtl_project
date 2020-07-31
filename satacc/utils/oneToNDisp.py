@@ -194,10 +194,11 @@ class OneToNDispWithBuffer(Component):
             s.input_buffer.deq.en @= s.input_buffer.deq.rdy & s.choose.out
             for i in range(num_outs):
                 s.sends[i].en @= s.sends[i].rdy & s.out_buffer[i].deq.rdy
-                s.out_buffer[i].deq.en @= s.out_buffer[i].rdy & s.sends[i].rdy
+                s.out_buffer[i].deq.en @= s.out_buffer[i].deq.rdy & s.sends[i].rdy
 
                 s.out_buffer[i].enq.en @= 1 if s.input_buffer.deq.rdy & s.out_buffer[i].enq.rdy & (choose_type(
                     i) == s.current_chose) else 0
+                s.sends[i].msg @=s.out_buffer[i].deq.ret
 
         @update_ff
         def seq():

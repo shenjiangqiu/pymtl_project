@@ -92,9 +92,9 @@ class Clause(Component):
             s.temp_value.enq.en@=s.temp_lit.enq.rdy & s.size_mem_recv.en
             s.size_mem_recv.rdy@=s.temp_value.enq.rdy
             s.temp_lit.enq.en@=s.value_mem_send.rdy & s.temp_value.enq.rdy & s.temp_lit.enq.rdy & s.clause_lit_queue.deq.rdy
-            msg = Bits79()
-
-            s.value_mem_send.msg@=msg
+      
+            s.value_mem_send.msg@=concat(Bits12(0), Bits32(
+                0), s.clause_lit_queue.deq.ret, Bits3(0))
 
             s.temp_value.enq.msg@=s.value_mem_recv.msg[17-2:17]
             # TODO: the real addr can be calculated immediately
@@ -109,10 +109,6 @@ class Clause(Component):
 
             s.clause_lit_with_value.deq.en@=s.clause_lit_with_value.deq.rdy & s.clause_process_fsm.value_recv.rdy
             s.clause_process_fsm.value_recv.en@=s.clause_lit_with_value.deq.rdy & s.clause_process_fsm.value_recv.rdy
-
-            pass
-        pass
-    pass
 
 
 class Clause_old(Component):

@@ -1,13 +1,16 @@
 from satacc.acc import Acc
 from satacc.watcher.watcher import Watcher
+from satacc.clause.clause import Clause
+from satacc.utils.mem_oparator import Sized_memory_sender_in_order
 from pymtl3 import *
 import os
 from pymtl3.passes.backends.yosys import YosysTranslationPass
 done = False
 try:
-    
-    macc = Watcher(1)
-    macc.set_metadata( YosysTranslationPass.enable, True)
+
+    macc = Sized_memory_sender_in_order(
+        Bits32, Bits64, 32, 1, 8)
+    macc.set_metadata(YosysTranslationPass.enable, True)
     macc.elaborate()
     macc.apply(YosysTranslationPass())
     done = True

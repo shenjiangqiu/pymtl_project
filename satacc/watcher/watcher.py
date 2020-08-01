@@ -7,7 +7,7 @@ from pymtl3.stdlib.mem import mk_mem_msg, MemMasterIfcRTL
 from pymtl3.stdlib.basic_rtl import Reg, RegEn, RegEnRst
 from . import watcher_data, watcher_process
 from ..utils.mem_oparator import Sized_memory_sender
-
+import os
 # memory read request type: type:4 op:8 addr:64 len:4 data:96 =176
 # memory resp type: type:4 op:8 test:2 len:4 data:96= 114
 # watcher send: type:4 op:8 addr:64 len:4 data:64 =144
@@ -73,9 +73,10 @@ class Watcher(Component):
 
             s.lit_to_size_addr_mem_send.en@=s.lit_to_size_addr_mem_send.rdy & s.lit_recv_buffer.deq.rdy
             s.lit_recv_buffer.deq.en@=s.lit_to_size_addr_mem_send.rdy & s.lit_recv_buffer.deq.rdy
-            msg = Bits176()
+
             # TODO: set the message
-            s.lit_to_size_addr_mem_send.msg@=msg
+            s.lit_to_size_addr_mem_send.msg@=concat(
+                Bits12(0), Bits32(0), s.lit_recv_buffer.deq.ret, Bits100(0))
 
             s.watcher_fetch_unit.size_recv.en @=s.watcher_fetch_unit.size_recv.rdy & s.size_addr_buffer.deq.rdy
             s.watcher_fetch_unit.addr_recv.en @=s.watcher_fetch_unit.addr_recv.rdy & s.size_addr_buffer.deq.rdy
@@ -86,8 +87,9 @@ class Watcher(Component):
             s.value_send.en@=s.watcher_buffer.deq.rdy & s.value_send.rdy & s.temp_cr_q.enq.rdy & s.temp_value_q.enq.rdy
             s.watcher_buffer.deq.en@=s.watcher_buffer.deq.rdy & s.value_send.rdy & s.temp_cr_q.enq.rdy & s.temp_value_q.enq.rdy
             s.temp_cr_q.enq.en@= s.watcher_buffer.deq.rdy & s.value_send.rdy & s.temp_cr_q.enq.rdy & s.temp_value_q.enq.rdy
-            msg = Bits86()
-            s.value_send.msg @= msg
+
+            s.value_send.msg @= concat(Bits12(0), Bits32(0),
+                                       s.watcher_buffer.deq.ret[0:32], Bits10(0))
 
             s.temp_value_q.enq.en@= s.value_recv.en
             s.value_recv.rdy@=s.temp_value_q.enq.rdy
@@ -105,7 +107,6 @@ class Watcher(Component):
             s.cr_send.en@=s.cr_send.rdy & s.cr_send_buffer.deq.rdy
             s.cr_send_buffer.deq.en@=s.cr_send.rdy & s.cr_send_buffer.deq.rdy
             s.cr_send.msg @=s.cr_send_buffer.deq.ret
-            pass
 
 
 class Watcher_old(Component):

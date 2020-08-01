@@ -7,7 +7,7 @@ from pymtl3.passes.backends.yosys import YosysTranslationPass
 done = False
 try:
     
-    macc = Clause()
+    macc = Clause(1)
     macc.set_metadata( YosysTranslationPass.enable, True)
     macc.elaborate()
     macc.apply(YosysTranslationPass())
